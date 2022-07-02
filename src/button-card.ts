@@ -144,9 +144,9 @@ class ButtonCard extends LitElement {
   }
 
   private _startTimerCountdown(): void {
-    if (this._config && this._config.entity && computeDomain(this._config.entity) === 'timer') {
-      const stateObj = this._hass!.states[this._config.entity];
-      this._startInterval(stateObj);
+    if (this._hasTimer()) {
+      const stateObj = this._hass!.states[this._getTimerEntity];
+      this._startInterval(stateObj);  
     }
   }
 
@@ -199,20 +199,52 @@ class ButtonCard extends LitElement {
     super.updated(changedProps);
 
     if (
-      this._config &&
-      this._config.entity &&
-      computeDomain(this._config.entity) === 'timer' &&
+      this._hasTimer() &&
       changedProps.has('_hass')
     ) {
-      const stateObj = this._hass!.states[this._config.entity];
+      const stateObj = this._hass!.states[this._getTimerEntity()];
       const oldHass = changedProps.get('_hass') as HomeAssistant;
-      const oldStateObj = oldHass ? oldHass.states[this._config.entity] : undefined;
+      const oldStateObj = oldHass ? oldHass.states[this._getTimerEntity()] : undefined;
 
       if (oldStateObj !== stateObj) {
         this._startInterval(stateObj);
       } else if (!stateObj) {
         this._clearInterval();
       }
+    }
+  }
+
+  private _hasTimerEntity(): boolean {
+    if (!this._config) {
+      return false;
+    }
+
+    return this._config.entity && computeDomain(this._config.entity) === 'timer';
+  }
+
+  private _hasTimerDependency(): boolean {
+    if (!this._config) {
+      return false;
+    }
+
+    return this._config.triggers_update && this._config.triggers_update.some(x => computeDomain(x) === 'timer');
+  }
+
+  private _hasTimer(): boolean {
+    return this._hasTimerEntity() || this._hasTimerDependency();
+  }
+
+  private _getTimerEntity(): string {
+    if (!this._hasTimer()) {
+      return null;
+    }
+
+    if (this._hasTimerEntity()) {
+      return this._config.entity;
+    }
+
+    if (this._hasTimerDependency()) {
+      return this._config.triggers_update.filter(x => computeDomain(x) === 'timer')[0];
     }
   }
 
@@ -508,12 +540,15 @@ class ButtonCard extends LitElement {
       const units = this._buildUnits(stateObj);
       if (units) {
         stateString = `${stateObj.state} ${units}`;
-      } else if (computeDomain(stateObj.entity_id) === 'timer') {
-        if (stateObj.state === 'idle' || this._timeRemaining === 0) {
+      } else if (this._hasTimer()) {
+
+        let timerStateObj = this._hass!.states[this._getTimerEntity()];
+
+        if (timerStateObj === 'idle' || this._timeRemaining === 0) {
           stateString = myComputeStateDisplay(this._hass!, this._hass!.localize, stateObj, this._hass!.language);
         } else {
-          stateString = this._computeTimeDisplay(stateObj);
-          if (stateObj.state === 'paused') {
+          stateString = this._computeTimeDisplay(timerStateObj);
+          if (timerStateObj.state === 'paused') {
             stateString += ` (${myComputeStateDisplay(
               this._hass!,
               this._hass!.localize,
