@@ -594,17 +594,14 @@ class ButtonCard extends LitElement {
       const units = this._buildUnits(stateObj);
       const timerEntity = this._getTimerEntity();
       console.info('buildstatestring timerEntity', timerEntity);
-      // if (units) {
-      if (false) {
-        // stateString = `${stateObj.state} ${units}`;
-        // } else if (this._hasTimer() && timerEntity) {
-      } else if (true) {
+      if (units) {
+        stateString = `${stateObj.state} ${units}`;
+      } else if (this._hasTimer() && timerEntity) {
         const timerStateObj = this._hass!.states[timerEntity!];
         console.info('buildstatestring hasTimer && timerEntity, stateObj', timerStateObj);
 
         if (timerStateObj.state === 'idle' || this._timeRemaining === 0) {
-          stateString = this._computeTimeDisplay(timerStateObj);
-          // stateString = myComputeStateDisplay(this._hass!, this._hass!.localize, stateObj, this._hass!.language);
+          stateString = myComputeStateDisplay(this._hass!, this._hass!.localize, stateObj, this._hass!.language);
         } else {
           stateString = this._computeTimeDisplay(timerStateObj);
           console.info('timer running, stateString', stateString);
@@ -617,12 +614,11 @@ class ButtonCard extends LitElement {
             )})`;
           }
         }
+      } else if (!this._config?.show_units && computeDomain(stateObj.entity_id) === 'sensor') {
+        stateString = stateObj.state;
+      } else {
+        stateString = myComputeStateDisplay(this._hass!, this._hass!.localize, stateObj, this._hass!.language);
       }
-      // else if (!this._config?.show_units && computeDomain(stateObj.entity_id) === 'sensor') {
-      //   stateString = stateObj.state;
-      // } else {
-      //   stateString = myComputeStateDisplay(this._hass!, this._hass!.localize, stateObj, this._hass!.language);
-      // }
     }
     return stateString;
   }
